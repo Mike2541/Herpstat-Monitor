@@ -24,6 +24,11 @@ Confirmed/documented models:
 
 It relies on the local SpyderWeb web interface and the `RAWSTATUS` endpoint used by these Wi-Fi-enabled models. Older non-SpyderWeb models are not the target for this script.
 
+Important:
+
+- the device's `RAWSTATUS` page must be enabled for this script to work
+- in the SpyderWeb manuals, that option appears under the advanced status integration settings
+
 Manuals:
 
 - Herpstat 1/2 SpyderWeb manual: https://www.spyderrobotics.com/manuals/Herpstat12_SpyderWeb_manual.pdf
@@ -127,6 +132,14 @@ If you do use a hostname instead of an IP:
 
 - make sure Windows can resolve it reliably
 - use that exact same hostname string as the key in `DeviceNames`
+
+### Device Web Settings Required
+
+Before using this script, make sure the SpyderWeb device is configured to expose the `RAWSTATUS` page.
+
+The manuals describe this under the advanced status integration options. That section includes an option to enable the device's `/RAWSTATUS` page, which exposes JSON-style status data for custom applications.
+
+If `RAWSTATUS` is not enabled, this script will not be able to read the device status correctly.
 
 ### Gmail API Setup
 
@@ -481,6 +494,7 @@ No outputs are found
 
 - The device responded, but the script did not get usable output objects.
 - Check the verbose log to see whether the RAWSTATUS request succeeded and whether output names were excluded.
+- Confirm the device's `/RAWSTATUS` page is enabled in the SpyderWeb advanced status integration settings.
 - Remember that names like `Nickname` or `Nickname2` are intentionally ignored by the script.
 
 ### Summary and Alert Timing
