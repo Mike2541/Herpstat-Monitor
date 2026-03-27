@@ -194,6 +194,116 @@ If you want to skip Healthchecks temporarily during testing, use:
 4. If you plan to use SMS, configure Textbelt and repeat the same test.
 5. If you plan to use Healthchecks, add the ping URL and test a normal run.
 
+## Windows Task Scheduler Setup
+
+Once your manual tests are working, the easiest way to automate the script on Windows is with Task Scheduler.
+
+### Recommended Schedule
+
+Run the script every `5 minutes`.
+
+That gives the script enough chances to:
+
+- catch summary windows like `8:00 AM` and `8:00 PM`
+- build consecutive device-failure counts reliably
+- send alerts reasonably quickly without running excessively often
+
+If you prefer, `10 minutes` can also work, but `5 minutes` is the safer default.
+
+### Create the Task
+
+1. Open `Task Scheduler`.
+2. Click `Create Task`.
+3. On the `General` tab:
+   - give it a name like `Herpstat Monitor`
+   - select `Run whether user is logged on or not` if you want it to keep working in the background
+   - enable `Run with highest privileges` only if your environment needs it
+4. On the `Triggers` tab:
+   - create a new trigger
+   - choose `Daily`
+   - check `Repeat task every`
+   - set it to `5 minutes`
+   - set `for a duration of` to `Indefinitely`
+5. On the `Actions` tab:
+   - create a new action
+   - `Program/script`:
+
+```text
+powershell.exe
+```
+
+   - `Add arguments`:
+
+```text
+-ExecutionPolicy Bypass -File "C:\Path\To\HerpstatMonitor.ps1"
+```
+
+   - `Start in`:
+
+```text
+C:\Path\To
+```
+
+6. On the `Conditions` tab:
+   - disable `Start the task only if the computer is on AC power` if this is a laptop and you want it to run on battery
+   - enable `Wake the computer to run this task` if needed
+7. On the `Settings` tab:
+   - enable `Allow task to be run on demand`
+   - enable `Run task as soon as possible after a scheduled start is missed`
+   - set `If the task is already running` to `Do not start a new instance`
+
+### Example
+
+If the script is stored in:
+
+```text
+C:\Users\YourName\Documents\Herpstat-Monitor\HerpstatMonitor.ps1
+```
+
+then use:
+
+`Program/script`
+
+```text
+powershell.exe
+```
+
+`Add arguments`
+
+```text
+-ExecutionPolicy Bypass -File "C:\Users\YourName\Documents\Herpstat-Monitor\HerpstatMonitor.ps1"
+```
+
+`Start in`
+
+```text
+C:\Users\YourName\Documents\Herpstat-Monitor
+```
+
+### First Scheduler Test
+
+After saving the task:
+
+1. Right-click the task and choose `Run`.
+2. Check the newest file in `Desktop\Herpstat\Verbose`.
+3. Confirm it created or updated:
+   - the verbose log
+   - the CSV log
+   - any test emails or alerts you expected
+
+If you want to test the scheduler without sending live alerts first, temporarily use:
+
+```text
+-ExecutionPolicy Bypass -File "C:\Path\To\HerpstatMonitor.ps1" -DryRunAlerts -SkipHealthchecks
+```
+
+### Scheduler Tips
+
+- Run the task on a machine that can actually reach your Herpstat IP addresses.
+- If the computer sleeps often, consider wake settings or a device that stays on all the time.
+- If you change the script path later, update the scheduled task action too.
+- If Task Scheduler says the task ran but nothing happened, the verbose log in `Desktop\Herpstat\Verbose` is the first place to check.
+
 ## Common Test Commands
 
 Basic alert flow:
