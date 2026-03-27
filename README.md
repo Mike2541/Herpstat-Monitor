@@ -5,11 +5,29 @@ PowerShell monitor for Herpstat thermostats with CSV logging, Gmail API email al
 ## What You Need
 
 - Windows with PowerShell
-- Access to your Herpstat device IPs on your local network
+- A supported Spyder Robotics Herpstat SpyderWeb device on your local network
 - A Gmail account for email alerts
 - A Google Cloud project with Gmail API enabled
 - Optional: a Textbelt API key for SMS alerts
 - Optional: a Healthchecks.io check for run monitoring
+
+## Supported Devices
+
+This script is intended for Spyder Robotics Herpstat models that include the SpyderWeb Wi-Fi/web interface.
+
+Confirmed/documented models:
+
+- Herpstat 1 SpyderWeb
+- Herpstat 2 SpyderWeb
+- Herpstat 4 SpyderWeb
+- Herpstat 6 SpyderWeb
+
+It relies on the local SpyderWeb web interface and the `RAWSTATUS` endpoint used by these Wi-Fi-enabled models. Older non-SpyderWeb models are not the target for this script.
+
+Manuals:
+
+- Herpstat 1/2 SpyderWeb manual: https://www.spyderrobotics.com/manuals/Herpstat12_SpyderWeb_manual.pdf
+- Herpstat 4/6 SpyderWeb manual: https://www.spyderrobotics.com/manuals/Herpstat46_SpyderWeb_manual.pdf
 
 ## Quick Start
 
@@ -44,9 +62,9 @@ This script is intentionally set up so most users can configure it by editing va
 Fill in these values first:
 
 - `Devices`
-  Add your Herpstat IP addresses.
+  Add your Herpstat IP addresses or resolvable hostnames.
 - `DeviceNames`
-  Map each IP to a friendly name like `Herpstat1` or `Rack Left`.
+  Map each device entry to a friendly name like `Herpstat1` or `Rack Left`.
 - `MailFrom`
   The Gmail address the script will send from.
 - `MailTo`
@@ -61,6 +79,24 @@ Example:
     '192.168.1.51' = 'Herpstat2'
 },
 ```
+
+### IP Address vs Hostname
+
+The script uses each `Devices` entry directly for:
+
+- `Test-Connection`
+- `http://<device>/RAWSTATUS`
+
+That means a resolvable hostname can work, not just a numeric IP address.
+
+In practice, static or reserved IPs are the recommended setup.
+
+Both SpyderWeb manuals state that the Herpstat initially receives a dynamic IP from the router and that it is often better to reserve a fixed/static IP so the address does not change over time. That recommendation is especially helpful for this script because scheduled monitoring is more reliable when the device address stays the same.
+
+If you do use a hostname instead of an IP:
+
+- make sure Windows can resolve it reliably
+- use that exact same hostname string as the key in `DeviceNames`
 
 ### Gmail API Setup
 

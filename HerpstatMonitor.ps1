@@ -7,11 +7,16 @@
   with retention, and pings Healthchecks.io for start/success/failure.
 
 .DESCRIPTION
-  - For each device IP in Devices:
+  - For each device entry in Devices:
       * Ping to verify reachability.
       * If reachable, fetch RAWSTATUS JSON and extract OutputNumber, OutputName,
         ProbeTemp, SetTemp, PowerOutput for outputs 1 and 2.
       * Write one CSV row per output (Timestamp, TimestampISO, fields, DeviceIP).
+  - Supported hardware:
+      * Herpstat 1/2 SpyderWeb
+      * Herpstat 4/6 SpyderWeb
+    The script depends on the SpyderWeb local web interface / RAWSTATUS endpoint.
+    Static or reserved IPs are recommended for reliable scheduled monitoring.
   - Alerts:
       * Email and SMS only after the same device reaches the consecutive failure threshold.
       * Recovery notifications are email-only.
@@ -42,7 +47,7 @@
       * -DryRunAlerts: suppress email/SMS/Healthchecks side effects and log what would happen.
 
 .PARAMETER Devices
-  Array of device IPs to poll. Default includes .11 and .12.
+  Array of device IPs or resolvable hostnames to poll.
 
 .PARAMETER SummaryDeviationThreshold
   Sends a summary deviation email/SMS when an output's average probe temp differs from
