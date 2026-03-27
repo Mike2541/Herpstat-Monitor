@@ -29,6 +29,37 @@ Manuals:
 - Herpstat 1/2 SpyderWeb manual: https://www.spyderrobotics.com/manuals/Herpstat12_SpyderWeb_manual.pdf
 - Herpstat 4/6 SpyderWeb manual: https://www.spyderrobotics.com/manuals/Herpstat46_SpyderWeb_manual.pdf
 
+## Why Use This Script Instead of Only the Built-In Features?
+
+Spyder Robotics already includes useful built-in SpyderWeb features, and for many users those may be enough.
+
+Documented built-in features include:
+
+- local web status viewing
+- a history graph in the web interface
+- scheduled email status updates
+- emergency email alerts for conditions such as probe errors, high/low alarms, and device resets
+- optional upload of status and charts to `herpstat.com` for online viewing
+- advanced status integration options including a custom upload target and the `RAWSTATUS` page
+
+This script is aimed at advanced users who want more control over how monitoring and reporting work.
+
+Reasons to use it:
+
+- combine multiple Herpstat devices into one reporting workflow
+- keep local CSV history for your own records
+- send summary emails based on averages across a time window instead of only a point-in-time snapshot
+- choose your own schedule through Windows Task Scheduler
+- add issue and recovery workflows that fit your own preferences
+- add optional SMS alerts through Textbelt
+- add external run monitoring through Healthchecks.io
+- customize thresholds, testing behavior, and alert timing more than the stock web interface allows
+
+In short:
+
+- if the built-in SpyderWeb features already cover your needs, they are a good and free option from Spyder Robotics
+- if you want more customizable reporting and alerting, this script is the advanced-user layer on top
+
 ## Quick Start
 
 1. Open `HerpstatMonitor.ps1`.
