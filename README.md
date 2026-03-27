@@ -196,7 +196,7 @@ If you want to skip Healthchecks temporarily during testing, use:
 
 ## Windows Task Scheduler Setup
 
-Once your manual tests are working, the easiest way to automate the script on Windows is with Task Scheduler.
+This script is intended to run automatically on a schedule. After the initial test run confirms your settings are correct, use Windows Task Scheduler for normal day-to-day operation.
 
 ### Recommended Schedule
 
@@ -280,7 +280,7 @@ powershell.exe
 C:\Users\YourName\Documents\Herpstat-Monitor
 ```
 
-### First Scheduler Test
+### Initial Scheduler Check
 
 After saving the task:
 
