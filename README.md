@@ -223,7 +223,6 @@ Paste the following into `HerpstatMonitor.ps1`:
 
 - `MailFrom` should be the Gmail account you authorized, or a valid Gmail "send as" identity on that account.
 - The script refreshes its own access tokens automatically. Only the refresh token needs to be stored.
-- For a private test setup, keeping these values in the script is fine. If you later adapt it for production or shared environments, consider moving secrets into a more secure storage approach.
 
 ### Textbelt SMS Setup
 
