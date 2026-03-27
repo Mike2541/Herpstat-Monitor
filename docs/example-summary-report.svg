@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="1080" viewBox="0 0 980 1080" role="img" aria-label="Example Herpstat summary report email">
+  <rect width="980" height="1080" fill="#ffffff"/>
+  <style>
+    .title { font: 700 30px 'Segoe UI', Arial, sans-serif; fill: #222222; }
+    .subtitle { font: 400 20px 'Segoe UI', Arial, sans-serif; fill: #333333; }
+    .section { font: 700 28px 'Segoe UI', Arial, sans-serif; fill: #222222; }
+    .head { font: 700 18px 'Segoe UI', Arial, sans-serif; fill: #2b2b2b; }
+    .cell { font: 400 18px 'Segoe UI', Arial, sans-serif; fill: #333333; }
+    .right { text-anchor: end; }
+    .center { text-anchor: middle; }
+    .grid { stroke: #d9dde3; stroke-width: 1; }
+    .card { fill: #ffffff; stroke: #d9dde3; stroke-width: 1; }
+  </style>
+
+  <text x="42" y="58" class="title">Herpstat Summary</text>
+  <text x="42" y="114" class="subtitle">Range: 03/26/2026 08:00 PM - 03/27/2026 08:00 AM</text>
+
+  <text x="42" y="176" class="section">Average Temperatures by Output</text>
+
+  <rect x="42" y="212" width="570" height="206" class="card"/>
+  <line x1="42" y1="264" x2="612" y2="264" class="grid"/>
+  <line x1="148" y1="212" x2="148" y2="418" class="grid"/>
+  <line x1="338" y1="212" x2="338" y2="418" class="grid"/>
+  <line x1="494" y1="212" x2="494" y2="418" class="grid"/>
+  <line x1="42" y1="315" x2="612" y2="315" class="grid"/>
+  <line x1="42" y1="366" x2="612" y2="366" class="grid"/>
+
+  <text x="95" y="244" class="head" text-anchor="middle">Output</text>
+  <text x="243" y="244" class="head" text-anchor="middle">Avg Probe Temp</text>
+  <text x="416" y="244" class="head" text-anchor="middle">Avg Set Temp</text>
+  <text x="553" y="244" class="head" text-anchor="middle">Readings</text>
+
+  <text x="52" y="296" class="cell">IMG</text>
+  <text x="328" y="296" class="cell right">84.8</text>
+  <text x="484" y="296" class="cell right">85.0</text>
+  <text x="602" y="296" class="cell right">12</text>
+
+  <text x="52" y="347" class="cell">Junglow</text>
+  <text x="328" y="347" class="cell right">87.0</text>
+  <text x="484" y="347" class="cell right">87.0</text>
+  <text x="602" y="347" class="cell right">12</text>
+
+  <text x="52" y="398" class="cell">Sand Boa</text>
+  <text x="328" y="398" class="cell right">92.6</text>
+  <text x="484" y="398" class="cell right">93.0</text>
+  <text x="602" y="398" class="cell right">12</text>
+
+  <text x="42" y="474" class="section">All Readings</text>
+
+  <rect x="42" y="510" width="898" height="470" class="card"/>
+  <line x1="42" y1="562" x2="940" y2="562" class="grid"/>
+  <line x1="292" y1="510" x2="292" y2="980" class="grid"/>
+  <line x1="404" y1="510" x2="404" y2="980" class="grid"/>
+  <line x1="512" y1="510" x2="512" y2="980" class="grid"/>
+  <line x1="618" y1="510" x2="618" y2="980" class="grid"/>
+  <line x1="756" y1="510" x2="756" y2="980" class="grid"/>
+  <line x1="866" y1="510" x2="866" y2="980" class="grid"/>
+
+  <line x1="42" y1="613" x2="940" y2="613" class="grid"/>
+  <line x1="42" y1="664" x2="940" y2="664" class="grid"/>
+  <line x1="42" y1="715" x2="940" y2="715" class="grid"/>
+  <line x1="42" y1="766" x2="940" y2="766" class="grid"/>
+  <line x1="42" y1="817" x2="940" y2="817" class="grid"/>
+  <line x1="42" y1="868" x2="940" y2="868" class="grid"/>
+  <line x1="42" y1="919" x2="940" y2="919" class="grid"/>
+
+  <text x="167" y="544" class="head center">Timestamp</text>
+  <text x="348" y="544" class="head center">Device</text>
+  <text x="458" y="544" class="head center">Output #</text>
+  <text x="565" y="544" class="head center">Name</text>
+  <text x="687" y="544" class="head center">Probe Temp</text>
+  <text x="811" y="544" class="head center">Set Temp</text>
+  <text x="903" y="544" class="head center">Power</text>
+
+  <text x="52" y="596" class="cell">03/26/2026 09:00:04 PM</text>
+  <text x="302" y="596" class="cell">Herpstat1</text>
+  <text x="458" y="596" class="cell center">1</text>
+  <text x="522" y="596" class="cell">Junglow</text>
+  <text x="746" y="596" class="cell right">87.0</text>
+  <text x="856" y="596" class="cell right">87.0</text>
+  <text x="930" y="596" class="cell right">68%</text>
+
+  <text x="52" y="647" class="cell">03/26/2026 09:00:04 PM</text>
+  <text x="302" y="647" class="cell">Herpstat1</text>
+  <text x="458" y="647" class="cell center">2</text>
+  <text x="522" y="647" class="cell">IMG</text>
+  <text x="746" y="647" class="cell right">85.2</text>
+  <text x="856" y="647" class="cell right">85.0</text>
+  <text x="930" y="647" class="cell right">0%</text>
+
+  <text x="52" y="698" class="cell">03/26/2026 09:00:04 PM</text>
+  <text x="302" y="698" class="cell">Herpstat2</text>
+  <text x="458" y="698" class="cell center">1</text>
+  <text x="522" y="698" class="cell">Sand Boa</text>
+  <text x="746" y="698" class="cell right">92.5</text>
+  <text x="856" y="698" class="cell right">93.0</text>
+  <text x="930" y="698" class="cell right">100%</text>
+
+  <text x="52" y="749" class="cell">03/26/2026 10:00:06 PM</text>
+  <text x="302" y="749" class="cell">Herpstat1</text>
+  <text x="458" y="749" class="cell center">1</text>
+  <text x="522" y="749" class="cell">Junglow</text>
+  <text x="746" y="749" class="cell right">86.9</text>
+  <text x="856" y="749" class="cell right">87.0</text>
+  <text x="930" y="749" class="cell right">34%</text>
+
+  <text x="52" y="800" class="cell">03/26/2026 10:00:06 PM</text>
+  <text x="302" y="800" class="cell">Herpstat1</text>
+  <text x="458" y="800" class="cell center">2</text>
+  <text x="522" y="800" class="cell">IMG</text>
+  <text x="746" y="800" class="cell right">84.8</text>
+  <text x="856" y="800" class="cell right">85.0</text>
+  <text x="930" y="800" class="cell right">34%</text>
+
+  <text x="52" y="851" class="cell">03/26/2026 10:00:07 PM</text>
+  <text x="302" y="851" class="cell">Herpstat2</text>
+  <text x="458" y="851" class="cell center">1</text>
+  <text x="522" y="851" class="cell">Sand Boa</text>
+  <text x="746" y="851" class="cell right">92.3</text>
+  <text x="856" y="851" class="cell right">93.0</text>
+  <text x="930" y="851" class="cell right">100%</text>
+
+  <text x="52" y="902" class="cell">03/26/2026 11:00:05 PM</text>
+  <text x="302" y="902" class="cell">Herpstat1</text>
+  <text x="458" y="902" class="cell center">1</text>
+  <text x="522" y="902" class="cell">Junglow</text>
+  <text x="746" y="902" class="cell right">87.0</text>
+  <text x="856" y="902" class="cell right">87.0</text>
+  <text x="930" y="902" class="cell right">36%</text>
+
+  <text x="52" y="953" class="cell">03/26/2026 11:00:05 PM</text>
+  <text x="302" y="953" class="cell">Herpstat1</text>
+  <text x="458" y="953" class="cell center">2</text>
+  <text x="522" y="953" class="cell">IMG</text>
+  <text x="746" y="953" class="cell right">84.9</text>
+  <text x="856" y="953" class="cell right">85.0</text>
+  <text x="930" y="953" class="cell right">43%</text>
+</svg>
