@@ -340,6 +340,122 @@ Optional one-off status or summary checks without device access:
 .\HerpstatMonitor.ps1 -ForceSummaryNow -Devices @() -SkipHealthchecks
 ```
 
+## Troubleshooting
+
+### Gmail API
+
+`Error 403: access_denied`
+
+- Your Google OAuth app is probably still in `Testing` and your Gmail account is not listed as a test user.
+- Add the Gmail account under the app's test users and try again.
+
+`invalid_grant`
+
+- The refresh token is invalid, expired, revoked, or tied to a different OAuth client.
+- Generate a new refresh token in OAuth Playground using the same client ID and client secret stored in the script.
+
+`redirect_uri_mismatch`
+
+- The OAuth client is missing the OAuth Playground redirect URI.
+- Make sure the client includes:
+  `https://developers.google.com/oauthplayground`
+
+Email sends fail even though OAuth is configured
+
+- Confirm `MailFrom` matches the Gmail account you authorized, or a valid Gmail "send as" alias on that account.
+- Run:
+
+```powershell
+.\HerpstatMonitor.ps1 -SendTestAlertsNow
+```
+
+- Then check the newest log in `Desktop\Herpstat\Verbose`.
+
+### Textbelt SMS
+
+SMS never sends
+
+- Confirm both `SmsTo` and `TextbeltApiKey` are filled in.
+- Check the verbose log for the Textbelt API response.
+- If you are outside the U.S., try E.164 phone format.
+
+SMS is being skipped
+
+- The script uses per-category SMS cooldowns.
+- A recent alert in the same category can suppress another SMS until the cooldown expires.
+- Check the verbose log for `SMS suppressed by rate limit`.
+
+SMS testing without consuming quota
+
+- Textbelt documents a free test key and also supports appending `_test` to your key for test requests.
+- That is useful when validating formatting before using live SMS credits.
+
+### Device Connectivity
+
+Devices are always unreachable
+
+- Confirm the IPs in `Devices` are correct.
+- Confirm the Windows machine running the script is on the same network and can reach the devices.
+- Try pinging the Herpstat IP manually from the same machine.
+- If the script is running on a different PC than usual, local firewall or routing may be different.
+
+No outputs are found
+
+- The device responded, but the script did not get usable output objects.
+- Check the verbose log to see whether the RAWSTATUS request succeeded and whether output names were excluded.
+- Remember that names like `Nickname` or `Nickname2` are intentionally ignored by the script.
+
+### Summary and Alert Timing
+
+Summary email did not send
+
+- The script only sends the scheduled summary inside the configured `SummaryWindowMinutes`.
+- It also records the last sent target time so it does not resend the same scheduled summary repeatedly.
+- Check:
+  - `SummaryHourAM`
+  - `SummaryHourPM`
+  - `SummaryWindowMinutes`
+  - `last_summary.json` in `Desktop\Herpstat`
+
+Summary deviation or probe sanity alert did not repeat
+
+- These alerts are stateful.
+- Once an issue is active, the script avoids sending the same first-occurrence alert over and over.
+- To retest first-occurrence behavior, use:
+
+```powershell
+.\HerpstatMonitor.ps1 -ResetAlertStates -DryRunAlerts
+```
+
+Recovery alert did not send SMS
+
+- Recovery alerts are intentionally email-only.
+- SMS is reserved for issue alerts.
+
+### Task Scheduler
+
+Task Scheduler says the task ran, but nothing happened
+
+- Check the newest log in `Desktop\Herpstat\Verbose`.
+- Confirm the scheduled task `Start in` folder is correct.
+- Confirm the script path in `-File` is correct.
+- Make sure the scheduled machine can still reach your Herpstat IPs.
+
+The task works manually but not on schedule
+
+- Make sure `Run whether user is logged on or not` is configured if needed.
+- Check the `Conditions` tab for power or sleep restrictions.
+- Confirm the task is repeating every `5 minutes` for `Indefinitely`.
+
+### Fastest Debug Path
+
+If something is not behaving the way you expect:
+
+1. Run a dry-run validation command.
+2. Run the matching live validation command if needed.
+3. Open the newest file in `Desktop\Herpstat\Verbose`.
+4. Check the JSON state files in `Desktop\Herpstat` if alert timing or repeat behavior seems wrong.
+
 ## Notes
 
 - Runtime logs and state files default to `Desktop\Herpstat`, not the repo folder.
