@@ -200,17 +200,29 @@ If you want to skip Healthchecks temporarily during testing, use:
 
 This script is intended to run automatically on a schedule. The one-off commands in this README are mainly for setup, validation, and troubleshooting. For normal day-to-day operation, run it with Windows Task Scheduler.
 
-### Recommended Schedule
+### Choosing a Schedule
 
-Run the script every `5 minutes`.
+This script works with either lighter scheduled runs or more frequent polling.
 
-That gives the script enough chances to:
+Common patterns:
 
-- catch summary windows like `8:00 AM` and `8:00 PM`
-- build consecutive device-failure counts reliably
-- send alerts reasonably quickly without running excessively often
+- `Every hour on the hour`
+  Good for lighter monitoring when slower detection is acceptable.
+- `Every 5 to 15 minutes`
+  Better if you want faster alerts and more tolerance for schedule drift.
 
-If you prefer, `10 minutes` can also work, but `5 minutes` is the safer default.
+Tradeoffs:
+
+- More frequent runs detect device failures, probe sanity issues, and recoveries sooner.
+- More frequent runs also make it easier to hit summary windows even if the task does not fire at the exact minute.
+- Hourly on-the-hour runs are completely valid, especially if your summary times are also on the hour.
+
+If you run hourly on the hour:
+
+- `SummaryWindowMinutes = 20` is usually fine for `8:00 AM` and `8:00 PM` summaries.
+- `FailureThreshold = 2` means a device issue alert will normally happen after about 2 hours of consecutive failures.
+
+If your task timing drifts or you want faster alerting, either widen `SummaryWindowMinutes` or run the task more frequently.
 
 ### Create the Task
 
@@ -224,7 +236,7 @@ If you prefer, `10 minutes` can also work, but `5 minutes` is the safer default.
    - create a new trigger
    - choose `Daily`
    - check `Repeat task every`
-   - set it to `5 minutes`
+   - set it to your preferred interval such as `5 minutes`, `15 minutes`, or `1 hour`
    - set `for a duration of` to `Indefinitely`
 5. On the `Actions` tab:
    - create a new action
@@ -411,6 +423,8 @@ Summary email did not send
 
 - The script only sends the scheduled summary inside the configured `SummaryWindowMinutes`.
 - It also records the last sent target time so it does not resend the same scheduled summary repeatedly.
+- If you run the script hourly, running it on the hour lines up best with on-the-hour summary targets.
+- If your task timing drifts, widen `SummaryWindowMinutes` or run the task more frequently.
 - Check:
   - `SummaryHourAM`
   - `SummaryHourPM`
@@ -445,7 +459,7 @@ The task works manually but not on schedule
 
 - Make sure `Run whether user is logged on or not` is configured if needed.
 - Check the `Conditions` tab for power or sleep restrictions.
-- Confirm the task is repeating every `5 minutes` for `Indefinitely`.
+- Confirm the task is repeating at your intended interval for `Indefinitely`.
 
 ### Fastest Debug Path
 
