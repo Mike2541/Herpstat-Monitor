@@ -43,25 +43,21 @@ Documented built-in features include:
 - optional upload of status and charts to `herpstat.com` for online viewing
 - advanced status integration options including a custom upload target and the `RAWSTATUS` page
 
-This script is aimed at advanced users who want more control over how monitoring and reporting work.
+This script is aimed at advanced users who want alerts that are harder to miss and reports that are easier to review without living in the web interface.
 
-Reasons to use it:
+Common reasons to use it:
 
-- combine multiple Herpstat devices into one reporting workflow
-- keep local CSV history for your own records
-- send summary emails based on averages across a time window instead of only a point-in-time snapshot
-- choose your own schedule through Windows Task Scheduler
-- keep monitoring independent of the SpyderWeb cloud upload path
-- use custom issue handling when a built-in missed-upload notice may only send once until the device uploads successfully again
-- add issue and recovery workflows that fit your own preferences
-- add optional SMS alerts through Textbelt
-- add external run monitoring through Healthchecks.io
-- customize thresholds, testing behavior, and alert timing more than the stock web interface allows
+- get optional SMS text alerts for device issues, since email alerts are easy to miss
+- keep getting reminder alerts while a device stays in a failure state, instead of relying on a single notice
+- receive status and summary emails that are easy to open directly from your inbox
+- review local CSV history and average-based summaries instead of only a point-in-time snapshot
+- monitor multiple Herpstat devices in one workflow if you run more than one
+- keep a local monitoring path that does not depend only on the SpyderWeb site upload path
 
 In short:
 
 - if the built-in SpyderWeb features already cover your needs, they are a good and free option from Spyder Robotics
-- if you want more customizable reporting and alerting, this script is the advanced-user layer on top
+- if you want text alerts, repeat reminders, and easier email-based review, this script is the advanced-user layer on top
 
 ## Quick Start
 
