@@ -39,6 +39,7 @@ Documented built-in features include:
 - a history graph in the web interface
 - scheduled email status updates
 - emergency email alerts for conditions such as probe errors, high/low alarms, and device resets
+- missed scheduled upload email alerts when the device fails to upload to the SpyderWeb site
 - optional upload of status and charts to `herpstat.com` for online viewing
 - advanced status integration options including a custom upload target and the `RAWSTATUS` page
 
@@ -50,6 +51,8 @@ Reasons to use it:
 - keep local CSV history for your own records
 - send summary emails based on averages across a time window instead of only a point-in-time snapshot
 - choose your own schedule through Windows Task Scheduler
+- keep monitoring independent of the SpyderWeb cloud upload path
+- use custom issue handling when a built-in missed-upload notice may only send once until the device uploads successfully again
 - add issue and recovery workflows that fit your own preferences
 - add optional SMS alerts through Textbelt
 - add external run monitoring through Healthchecks.io
