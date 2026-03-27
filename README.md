@@ -21,17 +21,19 @@ PowerShell monitor for Herpstat thermostats with CSV logging, Gmail API email al
    - `GoogleOAuthClientSecret`
    - `GoogleOAuthRefreshToken`
    - optional `SmsTo`, `TextbeltApiKey`, and `HealthchecksUrl`
-3. Run a dry-run test:
+3. Validate the configuration without sending alerts:
 
 ```powershell
 .\HerpstatMonitor.ps1 -SendTestAlertsNow -DryRunAlerts
 ```
 
-4. Run a real alert test:
+4. Validate live alert delivery:
 
 ```powershell
 .\HerpstatMonitor.ps1 -SendTestAlertsNow
 ```
+
+5. Set up Windows Task Scheduler for normal operation.
 
 ## Configuration Guide
 
@@ -176,7 +178,7 @@ If you want to skip Healthchecks temporarily during testing, use:
 .\HerpstatMonitor.ps1 -SkipHealthchecks
 ```
 
-### Recommended First-Time Test Order
+### Initial Validation
 
 1. Fill in Gmail API values and email addresses.
 2. Run:
@@ -192,11 +194,11 @@ If you want to skip Healthchecks temporarily during testing, use:
 ```
 
 4. If you plan to use SMS, configure Textbelt and repeat the same test.
-5. If you plan to use Healthchecks, add the ping URL and test a normal run.
+5. If you plan to use Healthchecks, add the ping URL and then switch to scheduled runs.
 
 ## Windows Task Scheduler Setup
 
-This script is intended to run automatically on a schedule. After the initial test run confirms your settings are correct, use Windows Task Scheduler for normal day-to-day operation.
+This script is intended to run automatically on a schedule. The one-off commands in this README are mainly for setup, validation, and troubleshooting. For normal day-to-day operation, run it with Windows Task Scheduler.
 
 ### Recommended Schedule
 
@@ -280,7 +282,7 @@ powershell.exe
 C:\Users\YourName\Documents\Herpstat-Monitor
 ```
 
-### Initial Scheduler Check
+### Scheduler Verification
 
 After saving the task:
 
@@ -291,7 +293,7 @@ After saving the task:
    - the CSV log
    - any test emails or alerts you expected
 
-If you want to test the scheduler without sending live alerts first, temporarily use:
+If you want to validate the scheduled task without sending live alerts first, temporarily use:
 
 ```text
 -ExecutionPolicy Bypass -File "C:\Path\To\HerpstatMonitor.ps1" -DryRunAlerts -SkipHealthchecks
@@ -304,7 +306,7 @@ If you want to test the scheduler without sending live alerts first, temporarily
 - If you change the script path later, update the scheduled task action too.
 - If Task Scheduler says the task ran but nothing happened, the verbose log in `Desktop\Herpstat\Verbose` is the first place to check.
 
-## Common Test Commands
+## Validation and Troubleshooting Commands
 
 Basic alert flow:
 
@@ -331,7 +333,7 @@ Reset saved alert states:
 .\HerpstatMonitor.ps1 -ResetAlertStates -DryRunAlerts
 ```
 
-Manual status or summary tests without device access:
+Optional one-off status or summary checks without device access:
 
 ```powershell
 .\HerpstatMonitor.ps1 -ForceStatusNow -Devices @() -SkipHealthchecks
@@ -342,6 +344,7 @@ Manual status or summary tests without device access:
 
 - Runtime logs and state files default to `Desktop\Herpstat`, not the repo folder.
 - The script is set up for top-of-file configuration so it is easier for non-technical users to edit.
+- Normal operation is intended to be scheduled through Windows Task Scheduler.
 - Before sharing your own configured copy, rotate any real OAuth, SMS, or Healthchecks secrets.
 
 ## Helpful Links
