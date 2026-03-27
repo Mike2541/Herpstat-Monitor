@@ -90,7 +90,7 @@ In short:
 
 ## Configuration Guide
 
-This script is intentionally set up so most users can configure it by editing values near the top of `HerpstatMonitor.ps1`. You do not need to use environment variables for the public template.
+This script is intentionally set up so most users can configure it by editing values near the top of `HerpstatMonitor.ps1`.
 
 ### Device Settings
 
@@ -217,7 +217,7 @@ Paste the following into `HerpstatMonitor.ps1`:
 
 - `MailFrom` should be the Gmail account you authorized, or a valid Gmail "send as" identity on that account.
 - The script refreshes its own access tokens automatically. Only the refresh token needs to be stored.
-- For a private test setup, keeping these values in the script is fine. For production or shared environments, move them to environment variables or a secure secret store.
+- For a private test setup, keeping these values in the script is fine. If you later adapt it for production or shared environments, consider moving secrets into a more secure storage approach.
 
 ### Textbelt SMS Setup
 
