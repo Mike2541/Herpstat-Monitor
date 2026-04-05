@@ -1,28 +1,23 @@
 <#
 .SYNOPSIS
   Polls one or more Herpstat thermostats, logs key readings, sends alerts on failures
-  (Gmail API email and Textbelt SMS with rate limiting plus a shared consecutive failure threshold),
+  (SMTP email and Textbelt SMS with rate limiting plus a shared consecutive failure threshold),
   emails twice-daily temperature summaries, sends summary deviation alerts when average
   probe temperature drifts from set temperature, writes a per-run verbose action log
   with retention, and pings Healthchecks.io for start/success/failure.
 
 .DESCRIPTION
-  - For each device entry in Devices:
+  - For each device IP in Devices:
       * Ping to verify reachability.
       * If reachable, fetch RAWSTATUS JSON and extract OutputNumber, OutputName,
         ProbeTemp, SetTemp, PowerOutput for outputs 1 and 2.
       * Write one CSV row per output (Timestamp, TimestampISO, fields, DeviceIP).
-  - Supported hardware:
-      * Herpstat 1/2 SpyderWeb
-      * Herpstat 4/6 SpyderWeb
-    The script depends on the SpyderWeb local web interface / RAWSTATUS endpoint.
-    Static or reserved IPs are recommended for reliable scheduled monitoring.
   - Alerts:
       * Email and SMS only after the same device reaches the consecutive failure threshold.
       * Recovery notifications are email-only.
       * SMS messages are sanitized to remove links/IPs/slash-dates, and are rate-limited
         per alert category to at most one text every N hours (default 8). SMS suppression is logged.
-      * Email is sent through the Gmail API using OAuth refresh-token flow.
+      * Email is sent through Gmail SMTP using an app password.
   - Twice-daily summary email near 8:00 AM and 8:00 PM (configurable window), combining
     data across devices.
   - Summary deviation alerts: when an output's average probe temp differs from its
@@ -47,7 +42,7 @@
       * -DryRunAlerts: suppress email/SMS/Healthchecks side effects and log what would happen.
 
 .PARAMETER Devices
-  Array of device IPs or resolvable hostnames to poll.
+  Array of device IPs to poll. Default includes .50 and .51.
 
 .PARAMETER SummaryDeviationThreshold
   Sends a summary deviation email/SMS when an output's average probe temp differs from
@@ -80,15 +75,6 @@
 .PARAMETER SkipHealthchecks
   Skips Healthchecks.io pings during the current run.
 
-.PARAMETER GoogleOAuthClientId
-  Gmail API OAuth client ID used for sending email.
-
-.PARAMETER GoogleOAuthClientSecret
-  Gmail API OAuth client secret used for sending email.
-
-.PARAMETER GoogleOAuthRefreshToken
-  Gmail API OAuth refresh token used to obtain short-lived access tokens for sending email.
-
 .EXAMPLE
   .\HerpstatMonitor.ps1 -SendTestAlertsNow -DryRunAlerts
   Safe dry run of the basic issue/recovery alert test path.
@@ -118,7 +104,6 @@
   Sends a manual summary email using existing CSV history without contacting devices.
 
 .NOTES
-  This file is a sanitized public template copy.
   User-editable defaults are grouped in the configuration section of the param block
   below so setup is easier for new users.
 
@@ -127,10 +112,10 @@
 param(
     # ================= USER CONFIGURATION =================
     # Devices and names
-    [string[]]$Devices = @("192.168.1.100","192.168.1.101"),
+    [string[]]$Devices = @("192.168.1.50","192.168.1.51"),
     [hashtable]$DeviceNames = @{
-        '192.168.1.100' = 'Herpstat1'
-        '192.168.1.101' = 'Herpstat2'
+        '192.168.1.50' = 'Herpstat1'
+        '192.168.1.51' = 'Herpstat2'
     },
 
     # Logging and polling
@@ -145,7 +130,9 @@ param(
 
     # Summary and alert thresholds
     [int]$SummaryHourAM = 8,
+    [ValidateRange(0, 59)][int]$SummaryMinuteAM = 0,
     [int]$SummaryHourPM = 20,
+    [ValidateRange(0, 59)][int]$SummaryMinutePM = 0,
     [int]$SummaryWindowMinutes = 20,
     [ValidateRange(0.1, 2147483647)][double]$SummaryDeviationThreshold = 1.0,
     [bool]$ProbeSanityEnabled = $true,
@@ -154,7 +141,7 @@ param(
 
     # Textbelt SMS
     [string]$SmsTo = "",
-    [string]$TextbeltApiKey = "PASTE_TEXTBELT_API_KEY_HERE",
+    [string]$TextbeltApiKey = "",
     [string]$TextbeltEndpoint = "https://textbelt.com/text",
     [bool]$SmsRateLimitEnabled = $true,
     [int]$SmsRateLimitHours = 8,
@@ -162,14 +149,14 @@ param(
     # Healthchecks.io
     [string]$HealthchecksUrl = "",
 
-    # Email and Gmail API
+    # Email via Gmail SMTP
     [string]$MailFrom = "youraddress@gmail.com",
     [string]$MailTo = "youraddress@gmail.com",
-    [string]$GoogleOAuthClientId = "PASTE_GOOGLE_OAUTH_CLIENT_ID_HERE",
-    [string]$GoogleOAuthClientSecret = "PASTE_GOOGLE_OAUTH_CLIENT_SECRET_HERE",
-    [string]$GoogleOAuthRefreshToken = "PASTE_GOOGLE_OAUTH_REFRESH_TOKEN_HERE",
-    [string]$GoogleOAuthTokenEndpoint = "https://oauth2.googleapis.com/token",
-    [string]$GmailApiSendEndpoint = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+    [string]$SmtpServer = "smtp.gmail.com",
+    [int]$SmtpPort = 587,
+    [bool]$UseSsl = $true,
+    [string]$SmtpUsername = "youraddress@gmail.com",
+    [string]$SmtpAppPassword = "",
 
     # ================= RUNTIME SWITCHES =================
     [switch]$ForceStatusNow,
@@ -200,6 +187,14 @@ $script:failStatePath  = Join-Path $LogDir "failures.json"
 $script:summaryAlertStatePath = Join-Path $LogDir "summary_deviation_alerts.json"
 $script:probeAlertStatePath   = Join-Path $LogDir "probe_sanity_alerts.json"
 $script:verbosePath    = $null  # set by Initialize-VerboseLog
+$script:smtpCredential = $null
+
+if (-not [string]::IsNullOrWhiteSpace($SmtpUsername) -and -not [string]::IsNullOrWhiteSpace($SmtpAppPassword)) {
+    $script:smtpCredential = New-Object System.Management.Automation.PSCredential(
+        $SmtpUsername,
+        (ConvertTo-SecureString $SmtpAppPassword -AsPlainText -Force)
+    )
+}
 
 # ================= Verbose logging helpers =================
 function Initialize-VerboseLog {
@@ -216,7 +211,7 @@ function Initialize-VerboseLog {
         "CSV: $script:logPath",
         "ArchiveDir: $ArchiveDir",
         "VerboseDir: $VerboseDir",
-        "Summary targets: $SummaryHourAM and $SummaryHourPM, window: +/- $SummaryWindowMinutes min",
+        "Summary targets: {0}:{1:d2} and {2}:{3:d2}, window: +/- {4} min" -f $SummaryHourAM, $SummaryMinuteAM, $SummaryHourPM, $SummaryMinutePM, $SummaryWindowMinutes,
         "Summary deviation alert threshold: $SummaryDeviationThreshold degree(s)",
         "Probe sanity: Enabled=$ProbeSanityEnabled, Min=$ProbeTempMin, Max=$ProbeTempMax",
         "RetentionDays: $RetentionDays, VerboseKeep: $VerboseKeep",
@@ -444,103 +439,56 @@ function ConvertTo-SmsSafeText {
 }
 
 # ================= Email helpers =================
-function Test-GmailRestApiConfigured {
+function Get-ExceptionDetailText {
     [CmdletBinding()]
-    param()
+    param([Parameter(Mandatory)]$ErrorRecord)
 
-    $values = @(
-        $GoogleOAuthClientId,
-        $GoogleOAuthClientSecret,
-        $GoogleOAuthRefreshToken
-    )
-
-    foreach ($value in $values) {
-        if ([string]::IsNullOrWhiteSpace($value)) { return $false }
-        if ($value -match '^PASTE_GOOGLE_OAUTH_') { return $false }
-    }
-    return $true
-}
-function ConvertTo-Base64Url {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][byte[]]$Bytes)
-
-    $base64 = [Convert]::ToBase64String($Bytes)
-    return $base64.TrimEnd('=').Replace('+', '-').Replace('/', '_')
-}
-function ConvertTo-Rfc2047Header {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Value)
-
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
-    return "=?UTF-8?B?{0}?=" -f [Convert]::ToBase64String($bytes)
-}
-function ConvertTo-MimeBase64Body {
-    [CmdletBinding()]
-    param([Parameter(Mandatory)][string]$Body)
-
-    $base64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($Body))
-    return (($base64 -split '(.{1,76})' | Where-Object { $_ }) -join "`r`n")
-}
-function ConvertTo-GmailApiRawMessage {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)][string]$From,
-        [Parameter(Mandatory)][string]$To,
-        [Parameter(Mandatory)][string]$Subject,
-        [Parameter(Mandatory)][string]$Body,
-        [switch]$AsHtml
-    )
-
-    $contentType = if ($AsHtml) { 'text/html; charset=UTF-8' } else { 'text/plain; charset=UTF-8' }
-    $lines = @(
-        "From: $From",
-        "To: $To",
-        "Subject: $(ConvertTo-Rfc2047Header -Value $Subject)",
-        "Date: $([DateTimeOffset]::Now.ToString('r'))",
-        'MIME-Version: 1.0',
-        "Content-Type: $contentType",
-        'Content-Transfer-Encoding: base64',
-        '',
-        (ConvertTo-MimeBase64Body -Body $Body)
-    )
-
-    $mime = $lines -join "`r`n"
-    return ConvertTo-Base64Url -Bytes ([System.Text.Encoding]::UTF8.GetBytes($mime))
-}
-function Get-GoogleOAuthAccessToken {
-    [CmdletBinding()]
-    param()
-
-    if (-not (Test-GmailRestApiConfigured)) {
-        throw "Google Gmail API OAuth values are not configured."
+    $parts = @()
+    $ex = $ErrorRecord.Exception
+    if ($ex -and $ex.Message) {
+        $parts += [string]$ex.Message
     }
 
-    $body = @{
-        client_id     = $GoogleOAuthClientId
-        client_secret = $GoogleOAuthClientSecret
-        refresh_token = $GoogleOAuthRefreshToken
-        grant_type    = 'refresh_token'
+    $response = $null
+    if ($ex -and $ex.PSObject.Properties.Name -contains 'Response') {
+        $response = $ex.Response
     }
 
-    $resp = Invoke-RestMethod -Uri $GoogleOAuthTokenEndpoint -Method Post -Body $body -ContentType 'application/x-www-form-urlencoded' -TimeoutSec 15 -ErrorAction Stop
-    if (-not $resp -or [string]::IsNullOrWhiteSpace([string]$resp.access_token)) {
-        throw "Google OAuth token response did not include an access token."
+    if ($response) {
+        try {
+            if ($response.PSObject.Properties.Name -contains 'StatusCode' -and $null -ne $response.StatusCode) {
+                $parts += ("HTTP {0}" -f [int]$response.StatusCode)
+            }
+            if ($response.PSObject.Properties.Name -contains 'StatusDescription' -and $response.StatusDescription) {
+                $parts += [string]$response.StatusDescription
+            }
+
+            $stream = $response.GetResponseStream()
+            if ($stream) {
+                $reader = New-Object System.IO.StreamReader($stream)
+                try {
+                    $responseText = $reader.ReadToEnd()
+                    if (-not [string]::IsNullOrWhiteSpace($responseText)) {
+                        $compact = ($responseText -replace '\s+', ' ').Trim()
+                        if ($compact.Length -gt 500) { $compact = $compact.Substring(0, 500) + '...' }
+                        $parts += ("Response={0}" -f $compact)
+                    }
+                } finally {
+                    $reader.Dispose()
+                    $stream.Dispose()
+                }
+            }
+        } catch {}
     }
-    return [string]$resp.access_token
-}
-function Send-EmailRawViaGmailApi {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)][string]$Subject,
-        [Parameter(Mandatory)][string]$Body,
-        [switch]$AsHtml
-    )
 
-    $accessToken = Get-GoogleOAuthAccessToken
-    $rawMessage = ConvertTo-GmailApiRawMessage -From $MailFrom -To $MailTo -Subject $Subject -Body $Body -AsHtml:$AsHtml
-    $payload = @{ raw = $rawMessage } | ConvertTo-Json -Compress
+    if ($ErrorRecord.ErrorDetails -and $ErrorRecord.ErrorDetails.Message) {
+        $detail = (($ErrorRecord.ErrorDetails.Message -replace '\s+', ' ').Trim())
+        if ($detail) { $parts += ("ErrorDetails={0}" -f $detail) }
+    }
 
-    Invoke-RestMethod -Uri $GmailApiSendEndpoint -Method Post -Headers @{ Authorization = "Bearer $accessToken" } -Body $payload -ContentType 'application/json' -TimeoutSec 15 -ErrorAction Stop | Out-Null
+    $parts = @($parts | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } | Select-Object -Unique)
+    if ($parts.Count -gt 0) { return ($parts -join ' | ') }
+    return "Unknown email send failure."
 }
 function Send-EmailRaw {
     [CmdletBinding()]
@@ -559,14 +507,28 @@ function Send-EmailRaw {
     }
 
     try {
-        if (-not (Test-GmailRestApiConfigured)) {
-            throw "Gmail API OAuth values are missing or still set to placeholders."
+        if (-not $script:smtpCredential) {
+            throw "SMTP credentials are missing."
         }
-        Send-EmailRawViaGmailApi -Subject $Subject -Body $Body -AsHtml:$AsHtml
-        Write-ActionLog -Message ("Email sent via Gmail API: {0}" -f $Subject)
+        $params = @{
+            To          = $MailTo
+            From        = $MailFrom
+            Subject     = $Subject
+            Body        = $Body
+            SmtpServer  = $SmtpServer
+            Port        = $SmtpPort
+            UseSsl      = $UseSsl
+            Credential  = $script:smtpCredential
+            ErrorAction = 'Stop'
+        }
+        if ($AsHtml) { $params['BodyAsHtml'] = $true }
+
+        Send-MailMessage @params
+        Write-ActionLog -Message ("Email sent via SMTP: {0}" -f $Subject)
         return $true
     } catch {
-        Write-ActionLog -Message ("Email send failed: {0}" -f $_.Exception.Message) -Level ERROR
+        $detail = Get-ExceptionDetailText -ErrorRecord $_
+        Write-ActionLog -Message ("Email send failed: {0}" -f $detail) -Level ERROR
         return $false
     }
 }
@@ -582,7 +544,7 @@ function Send-EmailWithSmsFallback {
     if (-not $ok) {
         $when = Get-SmsSafeTimestamp
         if ([string]::IsNullOrWhiteSpace($SmsMessage)) { $SmsMessage = "Email failed at $when. Subject: $Subject" }
-        Send-TextbeltAlert -Message $SmsMessage -FailureContext "Email failed, SMS fallback" -AlertCategory 'email_fallback'
+        $null = Send-TextbeltAlert -Message $SmsMessage -FailureContext "Email failed, SMS fallback" -AlertCategory 'email_fallback'
         Write-ActionLog -Message ("SMS fallback evaluated for failed email: {0}" -f $Subject) -Level WARN -AlsoConsole
     }
     return $ok
@@ -885,11 +847,19 @@ function Set-LastSummaryInfo {
     Write-ActionLog -Message ("Summary state saved: LastSent={0} LastTarget={1}" -f $LastSent, $LastTarget)
 }
 function Get-CurrentTargetTime {
-    param([datetime]$Now,[int]$HourAM,[int]$HourPM)
-    $today = $Now.Date; $targetAM = $today.AddHours($HourAM); $targetPM = $today.AddHours($HourPM)
+    param(
+        [datetime]$Now,
+        [int]$HourAM,
+        [int]$HourPM,
+        [int]$MinuteAM = 0,
+        [int]$MinutePM = 0
+    )
+    $today = $Now.Date
+    $targetAM = $today.AddHours($HourAM).AddMinutes($MinuteAM)
+    $targetPM = $today.AddHours($HourPM).AddMinutes($MinutePM)
     if     ($Now -ge $targetPM) { return $targetPM }
     elseif ($Now -ge $targetAM) { return $targetAM }
-    else { return $today.AddDays(-1).AddHours($HourPM) }
+    else { return $today.AddDays(-1).AddHours($HourPM).AddMinutes($MinutePM) }
 }
 function Test-SummaryWindowEligibility {
     [CmdletBinding()]
@@ -1448,7 +1418,7 @@ function Send-EmailSummaryNow {
 function Send-EmailSummaryIfWindow {
     $now    = Get-Date
     $state  = Get-LastSummaryInfo
-    $target = Get-CurrentTargetTime -Now $now -HourAM $SummaryHourAM -HourPM $SummaryHourPM
+    $target = Get-CurrentTargetTime -Now $now -HourAM $SummaryHourAM -HourPM $SummaryHourPM -MinuteAM $SummaryMinuteAM -MinutePM $SummaryMinutePM
     Write-ActionLog -Message ("Summary target evaluated as {0} with window +/-{1} min" -f $target, $SummaryWindowMinutes)
     if (-not (Test-SummaryWindowEligibility -Now $now -WindowMinutes $SummaryWindowMinutes -Target $target -State $state)) {
         Write-ActionLog -Message "Summary not sent (outside window or already sent)"
@@ -1462,8 +1432,12 @@ function Send-EmailSummaryIfWindow {
     Write-ActionLog -Message ("Summary rows: {0}" -f ($rows | Measure-Object | Select-Object -ExpandProperty Count))
     $html  = [string](Convert-RowsToHtml -Rows $rows -Since $since -Until $now)
     $subject = "Herpstat Temperature Summary (as of $($now.ToString('MM/dd/yyyy hh:mm tt')))"
-    $null = Send-EmailWithSmsFallback -Subject $subject -Body $html -AsHtml -SmsMessage ("Herpstat summary email failed at {0}." -f (Get-SmsSafeTimestamp))
-    Set-LastSummaryInfo -LastSent $now -LastTarget $target
+    $summarySent = Send-EmailWithSmsFallback -Subject $subject -Body $html -AsHtml -SmsMessage ("Herpstat summary email failed at {0}." -f (Get-SmsSafeTimestamp))
+    if ($summarySent) {
+        Set-LastSummaryInfo -LastSent $now -LastTarget $target
+    } else {
+        Write-ActionLog -Message "Summary state not updated because the summary email was not sent successfully" -Level WARN
+    }
     Send-SummaryDeviationAlerts -Rows $rows -Since $since -Until $now
 }
 function Send-TestAlerts {
@@ -1507,7 +1481,7 @@ function Send-TestSummaryDeviationAlerts {
             ProbeTemp    = 93.8
             SetTemp      = 95.0
             PowerOutput  = 72
-            DeviceIP     = '192.168.1.100'
+            DeviceIP     = '192.168.1.250'
             _dt          = $since.AddMinutes(10)
         },
         [pscustomobject]@{
@@ -1518,7 +1492,7 @@ function Send-TestSummaryDeviationAlerts {
             ProbeTemp    = 93.9
             SetTemp      = 95.0
             PowerOutput  = 74
-            DeviceIP     = '192.168.1.100'
+            DeviceIP     = '192.168.1.250'
             _dt          = $since.AddHours(2)
         }
     )
@@ -1531,7 +1505,7 @@ function Send-TestSummaryDeviationAlerts {
             ProbeTemp    = 94.7
             SetTemp      = 95.0
             PowerOutput  = 41
-            DeviceIP     = '192.168.1.100'
+            DeviceIP     = '192.168.1.250'
             _dt          = $until.AddMinutes(-20)
         },
         [pscustomobject]@{
@@ -1542,7 +1516,7 @@ function Send-TestSummaryDeviationAlerts {
             ProbeTemp    = 94.8
             SetTemp      = 95.0
             PowerOutput  = 38
-            DeviceIP     = '192.168.1.100'
+            DeviceIP     = '192.168.1.250'
             _dt          = $until.AddMinutes(-5)
         }
     )
@@ -1594,7 +1568,7 @@ function Send-TestProbeSanityAlerts {
             ProbeTemp    = ($ProbeTempMin - 5)
             SetTemp      = 90.0
             PowerOutput  = 100
-            DeviceIP     = '192.168.1.101'
+            DeviceIP     = '192.168.1.251'
         }
     )
     $recoveryRows = @(
@@ -1604,7 +1578,7 @@ function Send-TestProbeSanityAlerts {
             ProbeTemp    = (($ProbeTempMin + $ProbeTempMax) / 2)
             SetTemp      = 90.0
             PowerOutput  = 35
-            DeviceIP     = '192.168.1.101'
+            DeviceIP     = '192.168.1.251'
         }
     )
 
