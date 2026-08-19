@@ -127,6 +127,7 @@ param(
     [string]$ArchiveDir = "$LogDir\Archive",
     [string]$VerboseDir = "$LogDir\Verbose",
     [int]$VerboseKeep = 50,
+    [string]$SecretsPath = $(Join-Path $env:LOCALAPPDATA 'Herpstat-Monitor\secrets.clixml'),
 
     # Summary and alert thresholds
     [int]$SummaryHourAM = 8,
@@ -150,12 +151,12 @@ param(
     [string]$HealthchecksUrl = "",
 
     # Email via Gmail SMTP
-    [string]$MailFrom = "youraddress@gmail.com",
-    [string]$MailTo = "youraddress@gmail.com",
+    [string]$MailFrom = "",
+    [string]$MailTo = "",
     [string]$SmtpServer = "smtp.gmail.com",
     [int]$SmtpPort = 587,
     [bool]$UseSsl = $true,
-    [string]$SmtpUsername = "youraddress@gmail.com",
+    [string]$SmtpUsername = "",
     [string]$SmtpAppPassword = "",
 
     # ================= RUNTIME SWITCHES =================
@@ -168,6 +169,36 @@ param(
     [switch]$ResetAlertStates,
     [switch]$SkipHealthchecks
 )
+
+function Get-SecretStoreValue {
+    param(
+        [Parameter(Mandatory)]$Store,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    $property = $Store.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $null }
+    return [string]$property.Value
+}
+
+# Sensitive notification values belong in a DPAPI-protected CLIXML file, not in
+# this tracked script. Explicit non-empty parameters still take precedence.
+if (Test-Path -LiteralPath $SecretsPath) {
+    try {
+        $secretStore = Import-Clixml -LiteralPath $SecretsPath -ErrorAction Stop
+        foreach ($name in 'SmsTo', 'TextbeltApiKey', 'HealthchecksUrl', 'MailFrom', 'MailTo', 'SmtpUsername', 'SmtpAppPassword') {
+            $currentValue = Get-Variable -Name $name -ValueOnly
+            if ([string]::IsNullOrWhiteSpace($currentValue)) {
+                $storedValue = Get-SecretStoreValue -Store $secretStore -Name $name
+                if (-not [string]::IsNullOrWhiteSpace($storedValue)) {
+                    Set-Variable -Name $name -Value $storedValue
+                }
+            }
+        }
+    } catch {
+        Write-Warning "Could not load the protected Herpstat secret store; alerts requiring secrets will remain disabled."
+    }
+}
 
 function Get-DeviceFriendlyName {
     param([Parameter(Mandatory)][string]$Ip)
@@ -203,7 +234,7 @@ function Initialize-VerboseLog {
     $stamp = Get-Date -Format 'yyyyMMdd_HHmmss_fff'
     $path  = Join-Path $VerboseDir ("herpstat_run_{0}.txt" -f $stamp)
     $script:verbosePath = $path
-    $hcLine = if ($SkipHealthchecks) { "Healthchecks: Skipped=True Url=$HealthchecksUrl" } elseif ([string]::IsNullOrWhiteSpace($HealthchecksUrl)) { "Healthchecks: Url=" } else { "Healthchecks: Url=$HealthchecksUrl" }
+    $hcLine = "Healthchecks: Configured=$(-not [string]::IsNullOrWhiteSpace($HealthchecksUrl)), Skipped=$SkipHealthchecks"
     $header = @(
         "===== Herpstat run started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') =====",
         "Devices: " + ($Devices -join ', '),

@@ -1,5 +1,24 @@
 # Herpstat-Monitor
 
+## Protected notification secrets
+
+Keep SMTP, SMS, and Healthchecks values out of this repository. By default the
+script loads a DPAPI-protected CLIXML file from
+`%LOCALAPPDATA%\Herpstat-Monitor\secrets.clixml`, scoped to the Windows user who
+creates it. Create it once in that user's PowerShell session, replacing the
+placeholders locally; do not save the completed command or any populated values in source control:
+
+```powershell
+$secrets = [pscustomobject]@{
+  SmsTo = '...'; TextbeltApiKey = '...'; HealthchecksUrl = '...'
+  MailFrom = '...'; MailTo = '...'; SmtpUsername = '...'; SmtpAppPassword = '...'
+}
+$secrets | Export-Clixml "$env:LOCALAPPDATA\Herpstat-Monitor\secrets.clixml"
+```
+
+Explicit non-empty script parameters override the local store for a one-off
+run. The script never writes the Healthchecks URL to its verbose log.
+
 PowerShell monitor for Herpstat thermostats with CSV logging, Gmail SMTP email alerts, Textbelt SMS alerts, summary reporting, probe sanity checks, recovery notifications, and Healthchecks.io integration.
 
 ## What You Need
